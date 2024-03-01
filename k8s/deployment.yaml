@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: olagunju/myapp:latest1
+        imagePullPolicy: Always  # Ensures the latest image is always pulled
+        env: 
+          - name: AZURE_STORAGE_CONNECTION_STRING
+            valueFrom:
+              secretKeyRef:
+                name: azure-storage-secret
+                key: AZURE_STORAGE_CONNECTION_STRING
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /healthz  # Ensure this endpoint exists and returns HTTP 200 when the app is healthy
+            port: 3000
+          initialDelaySeconds: 30  # Gives your application more time to start up before the liveness probe kicks in
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3  # Kubernetes will try 3 times before restarting the container
+        readinessProbe:
+          httpGet:
+            path: /ready  # Ensure this endpoint exists and returns HTTP 200 when the app is ready to accept traffic
+            port: 3000
+          initialDelaySeconds: 15  # Allows a bit of time for your app to start before receiving traffic
+          timeoutSeconds: 3
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3  # Kubernetes will try 3 times before marking the pod as Unready
